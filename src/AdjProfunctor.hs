@@ -50,8 +50,8 @@ zapWithAdjunction ::
 zapWithAdjunction f ua = rightAdjunct 
 	(\b-> promap (\a-> f a b) ua)
 
-data ProAdjointT f g m a = ProAdjointT 
-	{runProAdjointT ::  
+data ProMAdjointT f g m a = ProMAdjointT 
+	{runProMAdjointT ::  
 		( ProfunctorFunctor f
 		, ProfunctorFunctor g
 		, ProfunctorFunctor m
@@ -63,10 +63,11 @@ instance ( ProfunctorFunctor f
 	 , ProfunctorFunctor g
 	 , ProfunctorFunctor m
 	 ) => ProfunctorFunctor
-	 	(ProAdjointT f g m) where
-	promap q (ProAdjointT gmfa) =
-		ProAdjointT $ 
+	 	(ProMAdjointT f g m) where
+	promap q (ProMAdjointT gmfa) =
+		ProMAdjointT $ 
 		promap (promap (promap q)) gmfa
 
-instance () => ProfunctorMonad (ProAdjointT f g m)
+instance () => ProfunctorMonad (ProMAdjointT f g m)
+   
 
