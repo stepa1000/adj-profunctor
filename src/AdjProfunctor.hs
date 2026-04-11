@@ -68,6 +68,48 @@ instance ( ProfunctorFunctor f
 		ProMAdjointT $ 
 		promap (promap (promap q)) gmfa
 
-instance () => ProfunctorMonad (ProMAdjointT f g m)
-   
+--ProMAdjointT m >>>= f = ProMAdjointT $ profmap (>>= rightAdjunct (runAdjointT . f)) m
+
+instance ( ProfunctorFunctor f
+	 , ProfunctorFunctor g
+	 , ProfunctorFunctor m
+	 , ProfunctorMonad m 
+	 , ProfunctorAdjunction f u
+	 ) => ProfunctorMonad (ProMAdjointT f g m) where
+  proreturn = ProMAdjointT $ leftAdjunct proreturn 
+  projoint (ProMAdjointT gmfgmfa) = promap (projoint . promap (counit . promap (runProMAdjointT) )) gmfgmfa 
+
+(>>>=) :: ( ProfunctorFunctor f
+	 , ProfunctorFunctor g
+	 , ProfunctorFunctor m
+	 , ProfunctorMonad m
+	 ) => ProMAdjointT f g m a -> (a :-> ProMAdjointT f g m b) -> ProMAdjointT f g m b 
+m >>>= f = projoint $ promap f m
+
+data ProWAdjointT f g w a = ProWAdjointT 
+	{runProWAdjointT ::
+		( ProfunctorFunctor f
+		, ProfunctorFunctor g
+		, ProfunctorFunctor w
+		, Profunctor a) => 
+		f (w (g a))
+	}
+
+instance ( ProfunctorFunctor f
+	 , ProfunctorFunctor g
+	 , ProfunctorFunctor w
+	 ) => ProfunctorFunctor
+	 	(ProWAdjointT f g w) where
+	promap q (ProWAdjointT gwfa) =
+		ProMAdjointT $ 
+		promap (promap (promap q)) gwfa
+
+instance ( ProfunctorFunctor f
+	 , ProfunctorFunctor g
+	 , ProfunctorFunctor w
+	 , ProfunctorComonad w
+	 , ProfunctorAdjunction f u
+	 ) => ProfunctorComonad (ProWAdjointT f g w) where
+	proextend f (ProWAdjointT m) = ProWAdjointT $ profmap (proextend $ leftAdjunct (f . ProWAdjointT)) m
+
 
