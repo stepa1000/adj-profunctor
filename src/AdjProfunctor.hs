@@ -110,6 +110,10 @@ instance ( ProfunctorFunctor f
 	 , ProfunctorComonad w
 	 , ProfunctorAdjunction f u
 	 ) => ProfunctorComonad (ProWAdjointT f g w) where
-	proextend f (ProWAdjointT m) = ProWAdjointT $ profmap (proextend $ leftAdjunct (f . ProWAdjointT)) m
+	proextract = rightAdjunct proextract . runProWAdjointT
+	produplicate = proextend id
+
+proextend :: (ProfunctorComonad w, Profunctor a, Profunctor b) => (w a :-> b) -> (w a :-> w b)
+proextend f (ProWAdjointT m) = ProWAdjointT $ profmap (proextend $ leftAdjunct (f . ProWAdjointT)) m
 
 
