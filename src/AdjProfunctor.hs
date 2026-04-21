@@ -116,4 +116,93 @@ instance ( ProfunctorFunctor f
 proextend :: (ProfunctorComonad w, Profunctor a, Profunctor b) => (w a :-> b) -> (w a :-> w b)
 proextend f (ProWAdjointT m) = ProWAdjointT $ profmap (proextend $ leftAdjunct (f . ProWAdjointT)) m
 
+spawnWAdj :: (ProfunctorComonad w, ProfunctorAdjunction f u) => w a :-> u (ProWAdjointT f g w (f a))
+spawnWAdj wa = promap ProWAdjointT $ promap (promap (promap unit)) $ unit wa
+--                u (f (w (u (f (a)))))          u (f (w a))
 
+data ProIdT p a b = ProIdT (p a b)
+
+instance Profunctor p => Profunctor (ProIdT p) where
+   dimap f g (ProIdT p) = ProIdT $ dimap f g p
+
+instance ProfunctorFunctor ProIdT where
+   promap f (ProIdT p) = ProIdT $ f p
+
+-- composeAdjW :: (ProfunctorComonad w1, ProfunctorComonad w2, ProfunctorAdjunction f u, Profunctor a, Profunctor b) => 
+-- 	ProWAdjointT f g w1 a -> ProWAdjointT f g w2 b -> ProWAdjointT () () ProIdT ()
+
+{-
+composeAdjW :: (ProfunctorComonad w, ProfunctorAdjunction f u, Profunctor a, Profunctor b, ProfunctorAdjunction f2 u2) => 
+	(Product 
+		(ProWAdjointT f g w a) 
+		(ProWAdjointT f2 g2 w b)) :-> 
+	ProWAdjointT 
+		(Procompose (ProWAdjointT f2 g2 w)) 
+		(Rift (ProWAdjointT f2 g2 w)) 
+		(ProWAdjointT f g w) 
+		(Product a b)
+composeAdjW (Pair pw1 pw2) = ProWAdjointT $ Procompose pw2 $ 
+	promap (\a-> Rift (\npw2-> )) pw1
+
+-}
+
+spawnWAdjCompose ::(ProfunctorComonad w, ProfunctorAdjunction f u, Profunctor a, ProfunctorAdjunction f2 u2) => 
+	(ProWAdjointT f g w a) :->
+	Rift (ProWAdjointT f2 g2 w) (ProWAdjointT 
+ 		(Procompose (ProWAdjointT f2 g2 w)) 
+		(Rift (ProWAdjointT f2 g2 w)) 
+		(ProWAdjointT f g w) 
+		(Procompose (ProWAdjointT f2 g2 w) a))
+spawnWAdjCompose = spawnWAdj
+{-
+(ProWAdjointT f g w a) :->
+	Rift (ProWAdjointT f2 g2 w) (ProWAdjointT 
+ 		(Procompose (ProWAdjointT f2 g2 w)) 
+		(Rift (ProWAdjointT f2 g2 w)) 
+		(ProWAdjointT f g w) 
+		(Procompose (ProWAdjointT f2 g2 w) a))
+
+(ProWAdjointT (Procompose (ProWAdjointT f2 g2 w)) = f
+		(Rift (ProWAdjointT f2 g2 w)) = g
+		(ProWAdjointT f g w) = w
+		(Procompose (ProWAdjointT f2 g2 w) a) = a
+		) :->
+	Rift ((ProWAdjointT 
+ 		(Procompose (ProWAdjointT f g w)) 
+		(Rift (ProWAdjointT f g w)) 
+		(ProWAdjointT f g w) 
+		(Procompose (ProWAdjointT f g w) a)) 
+			(ProWAdjointT 
+ 			(Procompose (ProWAdjointT f g w)) 
+			(Rift (ProWAdjointT f g w)) 
+			(ProWAdjointT f g w) 
+			(Procompose (ProWAdjointT f g w) a))
+
+
+-}
+
+{-
+data CompProWAdj f g w a 
+	= CPWALeaf (ProWAdjointT f g w a)
+	| CPWANode (ProWAdjointT 
+ 		(Procompose (CompProWAdj f g w)) 
+		(Rift (CompProWAdj f g w)) 
+	        (CompProWAdj f g w)	
+		(Procompose (CompProWAdj f g w) a))
+
+spawnWAdjComposeRec ::(ProfunctorComonad w, ProfunctorAdjunction f u, Profunctor a) => 
+	(ProWAdjointT f g w a) :->
+	Rift (ProWAdjointT f g w) (ProWAdjointT 
+ 		(Procompose (ProWAdjointT f g w)) 
+		(Rift (ProWAdjointT f g w)) 
+		(ProWAdjointT f g w) 
+		(Procompose (ProWAdjointT f g w) a))
+spawnWAdjComposeRec = spawnWAdj
+-}
+
+liftMAdj :: (ProfunctorMonad m, ProfunctorAdjunction f u) => m a :-> ProMAdjointT f g m a 
+liftMAdj ma = promap (\ mfu -> mfu >>>= (\fu-> ma >>>= (\a-> proreturn $ promap (\_->a) fu))) $ runProMAdjointT $ proreturn undefined
+
+liftMAdjCompose :: (ProfunctorMonad m, ProfunctorAdjunction f u, ProfunctorAdjunction f2 u2) => 
+	ProMAdjointT f g m a :-> ProMAdjointT (Procompose f2) (Rift g2) (ProMAdjointT f g m) a 
+liftMAdjCompose = liftMAdj 
