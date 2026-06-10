@@ -3,6 +3,7 @@ module AdjProfunctor where
 import Data.Profunctor
 import Data.Profunctor.Monad
 import Data.Prpfunctor.Adjunction
+import Data.Distributive
 
 leftAdjunct ::
 	( ProfunctorAdjunction f u
@@ -50,14 +51,41 @@ zapWithAdjunction ::
 zapWithAdjunction f ua = rightAdjunct 
 	(\b-> promap (\a-> f a b) ua)
 
-data ProMAdjointT f g m a = ProMAdjointT 
+data ProMAdjointT f g m a x y = ProMAdjointT 
 	{runProMAdjointT ::  
 		( ProfunctorFunctor f
 		, ProfunctorFunctor g
 		, ProfunctorFunctor m
 		, Profunctor a) =>
-		g (m ( f a))
+		g (m ( f a)) x y
 		}
+
+pmatMapG :: ( ProfunctorFunctor f
+		, ProfunctorFunctor g
+		, ProfunctorFunctor m
+		, Profunctor a) =>
+   (forall q. Profunctor q => g q x1 y1 -> g2 q x2 y2) -> 
+   ProMAdjointT f g m a x1 y1 -> 
+   ProMAdjointT f g2 m a x2 y2
+pmatMapG t (ProMAdjointT gmfa) = ProMAdjointT $ t gmfa
+
+pmatMapM :: ( ProfunctorFunctor f
+		, ProfunctorFunctor g
+		, ProfunctorFunctor m
+		, Profunctor a) =>
+   (forall q. Profunctor q => m q x1 y1 -> m2 q x2 y2) -> 
+   ProMAdjointT f g m a x1 y1 -> 
+   ProMAdjointT f g m2 a x2 y2
+pmatMapM t (ProMAdjointT gmfa) = ProMAdjointT $ promap t gmfa
+
+pmatMapF :: ( ProfunctorFunctor f
+		, ProfunctorFunctor g
+		, ProfunctorFunctor m
+		, Profunctor a) =>
+   (forall q. Profunctor q => f q x1 y1 -> f2 q x2 y2) -> 
+   ProMAdjointT f g m a x1 y1 -> 
+   ProMAdjointT f2 g m a x2 y2
+pmatMapF t (ProMAdjointT gmfa) = ProMAdjointT $ promap (promap t) gmfa
 
 instance ( ProfunctorFunctor f
 	 , ProfunctorFunctor g
@@ -86,14 +114,41 @@ instance ( ProfunctorFunctor f
 	 ) => ProMAdjointT f g m a -> (a :-> ProMAdjointT f g m b) -> ProMAdjointT f g m b 
 m >>>= f = projoint $ promap f m
 
-data ProWAdjointT f g w a = ProWAdjointT 
+data ProWAdjointT f g w a x y = ProWAdjointT 
 	{runProWAdjointT ::
 		( ProfunctorFunctor f
 		, ProfunctorFunctor g
 		, ProfunctorFunctor w
 		, Profunctor a) => 
-		f (w (g a))
+		f (w (g a)) x y
 	}
+
+pwatMapG :: ( ProfunctorFunctor f
+		, ProfunctorFunctor g
+		, ProfunctorFunctor w
+		, Profunctor a) =>
+   (forall q. Profunctor q => g q x1 y1 -> g2 q x2 y2) -> 
+   ProWAdjointT f g w a x1 y1 -> 
+   ProWAdjointT f g2 w a x2 y2
+pwatMapG t (ProMAdjointT gmfa) = ProMAdjointT $ promap (promap t) gmfa
+ 
+pwatMapM :: ( ProfunctorFunctor f
+		, ProfunctorFunctor g
+		, ProfunctorFunctor w
+		, Profunctor a) =>
+   (forall q. Profunctor q => w q x1 y1 -> w2 q x2 y2) -> 
+   ProWAdjointT f g w a x1 y1 -> 
+   ProWAdjointT f g w2 a x2 y2
+pwatMapM t (ProMAdjointT gmfa) = ProMAdjointT $ promap t gmfa
+
+pwatMapF :: ( ProfunctorFunctor f
+		, ProfunctorFunctor g
+		, ProfunctorFunctor w
+		, Profunctor a) =>
+   (forall q. Profunctor q => f q x1 y1 -> f2 q x2 y2) -> 
+   ProWAdjointT f g w a x1 y1 -> 
+   ProWAdjointT f2 g w a x2 y2
+pwatMapF t (ProMAdjointT gmfa) = ProMAdjointT $  gmfa
 
 instance ( ProfunctorFunctor f
 	 , ProfunctorFunctor g
@@ -116,9 +171,12 @@ instance ( ProfunctorFunctor f
 proextend :: (ProfunctorComonad w, Profunctor a, Profunctor b) => (w a :-> b) -> (w a :-> w b)
 proextend f (ProWAdjointT m) = ProWAdjointT $ profmap (proextend $ leftAdjunct (f . ProWAdjointT)) m
 
-spawnWAdj :: (ProfunctorComonad w, ProfunctorAdjunction f u) => w a :-> u (ProWAdjointT f g w (f a))
+spawnWAdj :: (ProfunctorComonad w, ProfunctorAdjunction f g) => w a :-> u (ProWAdjointT f g w (f a))
 spawnWAdj wa = promap ProWAdjointT $ promap (promap (promap unit)) $ unit wa
 --                u (f (w (u (f (a)))))          u (f (w a))
+
+prolower :: (ProfunctorComonad w, ProfunctorAdjunction f g) => ProWAdjointT f g w a :-> w a
+prolower (ProWAdjointT m) = counit $ promap ((\t-> t undefined). leftAdjunct . distribute . promap (rightAdjunct . (\g -> const g))) m
 
 data ProIdT p a b = ProIdT (p a b)
 
