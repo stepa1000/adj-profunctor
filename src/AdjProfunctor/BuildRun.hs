@@ -5,6 +5,7 @@ import Data.Profunctor.Monad
 import Data.Prpfunctor.Adjunction
 
 import Control.Category.Free
+import Data.Profunctors.CompPF
 
 buildCoPasTamSum :: 
    ( ProfunctorComonad w
@@ -127,6 +128,7 @@ runCatRif :: ( ProfunctorMonad m
    m p
 runCatRif f (ProMAdjointT pma) = promap (\ (Procompose fy fx) -> (fy . f fx) ) fx) $ proextract pma
 
+{-
 data ProAdjW p w a x y
    = PAWTCPTS (ProWAdjointT CopastroSum CotambaraSum w a x y)
    | PAWTPTS (ProWAdjointT PastroSum TambaraSum w a x y)
@@ -146,7 +148,7 @@ data ProAdjM p m a x y
    | PAMTCR (ProMAdjointT (Procompose p) (Rift p) m a x y)
 
 type CatProAdjM m a x y = Queue (ProAdjM (CatProAdjM m a) m a)
-
+-}
 {-
 data ProAdj (a :: ProAdj) -- p
    = CoPasTamSun
